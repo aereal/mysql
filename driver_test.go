@@ -1619,6 +1619,40 @@ func TestCollation(t *testing.T) {
 	}
 }
 
+func TestConnectorWithCollation(t *testing.T) {
+	if !available {
+		t.Skipf("MySQL server not running on %s", netAddr)
+	}
+
+	expected := "utf8mb4_unicode_ci"
+
+	cfgs := make([]*Config, 0, 2)
+	withParam := configForTests(t)
+	withParam.Params = map[string]string{"collation": expected}
+	cfgs = append(cfgs, withParam)
+	withCollation := configForTests(t)
+	withCollation.Collation = expected
+	cfgs = append(cfgs, withCollation)
+
+	for _, cfg := range cfgs {
+		t.Run(fmt.Sprintf("Params=%v Collation=%s", cfg.Params, cfg.Collation), func(t *testing.T) {
+			conn, err := NewConnector(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			db := sql.OpenDB(conn)
+			defer db.Close()
+			var got string
+			if err := db.QueryRow(`SELECT @@collation_connection`).Scan(&got); err != nil {
+				t.Fatal(err)
+			}
+			if got != expected {
+				t.Fatalf("expected connection collation %s but got %s", expected, got)
+			}
+		})
+	}
+}
+
 func TestColumnsWithAlias(t *testing.T) {
 	runTestsParallel(t, dsn+"&columnsWithAlias=true", func(dbt *DBTest, _ string) {
 		rows := dbt.mustQuery("SELECT 1 AS A")

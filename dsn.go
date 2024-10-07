@@ -204,6 +204,13 @@ func (cfg *Config) normalize() error {
 		cfg.Logger = defaultLogger
 	}
 
+	if cfg.Params != nil {
+		if fromParam := cfg.Params["collation"]; fromParam != "" && cfg.Collation == "" {
+			cfg.Collation = fromParam
+			delete(cfg.Params, "collation")
+		}
+	}
+
 	return nil
 }
 
@@ -347,6 +354,9 @@ func (cfg *Config) FormatDSN() string {
 	if cfg.Params != nil {
 		var params []string
 		for param := range cfg.Params {
+			if param == "collation" && cfg.Collation != "" {
+				continue
+			}
 			params = append(params, param)
 		}
 		sort.Strings(params)
